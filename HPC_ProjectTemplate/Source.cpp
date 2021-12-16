@@ -13,6 +13,21 @@
 using namespace std;
 using namespace msclr::interop;
 
+struct Image {
+	int* const _img, const _height, const _width;
+
+	Image(int* img, int h, int w) : _img(img), _height(h), _width(w){}
+	~Image() {
+		free((int*)_img); // https://stackoverflow.com/questions/2819535/unable-to-free-const-pointers-in-c
+	}
+
+	int operator()(unsigned row, unsigned col) {
+		if (row >= _height || col >= _width)
+			throw "image out of bounds";
+		return _img[_width * row + col];
+	}
+};
+
 int* inputImage(int* w, int* h, System::String^ imagePath) //put the size of image in w & h
 {
 	int* input;
@@ -90,7 +105,8 @@ int main()
 	img = "..//Data//Input//test.png";
 
 	imagePath = marshal_as<System::String^>(img);
-	int* imageData = inputImage(&ImageWidth, &ImageHeight, imagePath);
+	//int* imageData = inputImage(&ImageWidth, &ImageHeight, imagePath);
+	Image imageData(inputImage(&ImageWidth, &ImageHeight, imagePath), ImageHeight, ImageWidth);
 	
 	start_s = clock();
 	/*
@@ -98,10 +114,10 @@ int main()
 	*/
 	stop_s = clock();
 	TotalTime += (stop_s - start_s) / double(CLOCKS_PER_SEC) * 1000;
-	createImage(imageData, ImageWidth, ImageHeight, 1);
+	createImage(imageData._img, ImageWidth, ImageHeight, 1);
 	cout << "time: " << TotalTime << endl;
 
-	free(imageData);
+	//free(imageData._img);
 	return 0;
 
 }
