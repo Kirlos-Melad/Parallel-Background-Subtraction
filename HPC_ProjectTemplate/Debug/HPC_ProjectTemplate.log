@@ -1,8 +1,19 @@
 ﻿  Source.cpp
-C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(19,42): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
-C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(104,63): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
-C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(104,86): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
-C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(129,20): warning C4018: '<': signed/unsigned mismatch
-C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(188,65): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(25,42): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(37,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(38,22): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(122,63): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(122,86): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(147,20): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(154,24): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(155,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(156,22): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(169,40): warning C4838: conversion from 'unsigned int' to 'int' requires a narrowing conversion
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(232,20): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(233,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(244,20): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(245,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(325,65): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(143): warning C4172: returning address of local variable or temporary: imgVec
   Source.obj : MSIL module encountered; incremental linking is disabled for MSIL; performing full link
   HPC_ProjectTemplate.vcxproj -> C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\Debug\HPC_ProjectTemplate.exe
