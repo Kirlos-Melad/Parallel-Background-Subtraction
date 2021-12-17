@@ -1,6 +1,8 @@
 ﻿  Source.cpp
-C:\Users\KirlosMelad\MyFiles\Projects Working on\HPC_ProjectTemplate\HPC_ProjectTemplate\Source.cpp(100,65): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
-  .NETFramework,Version=v4.0.AssemblyAttributes.cpp
-  Generating Code...
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(19,42): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(104,63): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(104,86): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(129,20): warning C4018: '<': signed/unsigned mismatch
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(188,65): warning C4244: '+=': conversion from 'double' to 'int', possible loss of data
   Source.obj : MSIL module encountered; incremental linking is disabled for MSIL; performing full link
-  HPC_ProjectTemplate.vcxproj -> C:\Users\KirlosMelad\MyFiles\Projects Working on\HPC_ProjectTemplate\Debug\HPC_ProjectTemplate.exe
+  HPC_ProjectTemplate.vcxproj -> C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\Debug\HPC_ProjectTemplate.exe
