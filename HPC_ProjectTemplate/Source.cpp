@@ -1,10 +1,9 @@
 #include <iostream>
 #include <math.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include<string.h>
 #include<msclr\marshal_cppstd.h>
-#include <ctime>// include this header 
+#include <ctime>// include this header
 #include <mpi.h>
 #pragma once
 
@@ -16,38 +15,14 @@ using namespace std;
 using namespace msclr::interop;
 
 
-MPI_Aint MPI_Aint_diff(MPI_Aint addr1, MPI_Aint addr2) {
-	return addr1 - addr2;
-}
+// Image Global Variables
+int const IMAGE_NUMBER = 40;
+int const IMAGE_HEIGHT = 320;
+int const IMAGE_WIDTH = 240;
+int const IMAGE_SIZE = 76800;
 
-struct Image {
-	int* const _img;
-	unsigned int const _height, const _width;
 
-	/*Image() {
-		_img = nullptr;
-		_width = _height = 0;
-	}*/
-	Image(int* img, unsigned h, unsigned w) : _img(img), _height(h), _width(w) {}
-	~Image() {
-		free((int*)_img); // https://stackoverflow.com/questions/2819535/unable-to-free-const-pointers-in-c
-	}
-
-	void operator=(Image other) {
-		for (int i = 0; i < other._height; i++) {
-			for (int j = 0; j < other._width; j++) {
-				(*this)(i, j) = other(i, j);
-			}
-		}
-	}
-
-	int& operator()(unsigned row, unsigned col) {
-		if (row >= _height || col >= _width)
-			throw "image out of bounds";
-		return _img[_width * row + col];
-	}
-};
-
+// Load image to memory
 int* inputImage(int* w, int* h, System::String^ imagePath) //put the size of image in w & h
 {
 	int* input;
@@ -87,7 +62,8 @@ int* inputImage(int* w, int* h, System::String^ imagePath) //put the size of ima
 }
 
 
-void createImage(int* image, int width, int height, string rsltName, int index)
+// Save image to drive
+void createImage(int* image, int width, int height, int index)
 {
 	System::Drawing::Bitmap MyNewImage(width, height);
 
@@ -109,153 +85,95 @@ void createImage(int* image, int width, int height, string rsltName, int index)
 			MyNewImage.SetPixel(j, i, c);
 		}
 	}
-	MyNewImage.Save("..//Data//Output//" + marshal_as<System::String^>(rsltName) + index + ".png");
-	cout << "result Image Saved " << rsltName << index << endl;
+	MyNewImage.Save("..//Data//Output//outputRes" + index + ".png");
+	cout << "result Image Saved " << index << endl;
 }
 
-vector<Image>* readInput() {
+
+// Copy pixels' values from an image to another
+void copyImage(int dst[IMAGE_SIZE], int src[IMAGE_SIZE]) {
+	for (int i = 0; i < IMAGE_SIZE; i++) {
+		dst[i] = src[i];
+	}
+}
+
+
+// Load multiple images
+void getImages(int **imgArr) {
 	System::String^ imagePath;
-	string const path = "..//Data//Input//";
+	string const path = "../Data/Input/";
 	string imgName;
+	string num;
+	int internalLoop;
 
-	vector<Image> imgVec;
-	int* ImageArr, ImageWidth, ImageHeight, const imgNumber = 495, const totalDigits = 6;
+	int* img, ImageWidth, ImageHeight, const totalDigits = 6;
 
-	for (int i = 1; i <= imgNumber; i++) {
+	for (int i = 1; i <= IMAGE_NUMBER; i++) {
 		// Get Img Name
 		imgName = "in";
-		string num = to_string(i);
+		num = to_string(i);
 
-		int const internalLoop = totalDigits - num.size();
+		internalLoop = totalDigits - num.size();
 		for (int j = 0; j < internalLoop; j++) {
 			imgName += '0';
 		}
 		imgName += num;
+		imgName += ".jpg";
 
 		// Get Img
 		imagePath = marshal_as<System::String^>(path + imgName);
-		ImageArr = inputImage(&ImageWidth, &ImageHeight, imagePath);
+		img = inputImage(&ImageWidth, &ImageHeight, imagePath);
 
-		// Append Img to the vector
-		imgVec.emplace_back(ImageArr, ImageHeight, ImageWidth);
-	}
+		// copy 'img' values to 'imgArr'
+		copyImage(imgArr[i - 1], img);
 
-	return &imgVec;
-}
-
-void saveOutput(vector<Image> &imgVec, string rsltName) {
-	for (int i = 0; i < imgVec.size(); i++) {
-		createImage(imgVec[i]._img, imgVec[i]._width, imgVec[i]._height, rsltName, i + 1);
+		delete[] img;
 	}
 }
 
-void muskEquation(vector<Image>& imgVec, int start, Image &bgImg, int const TH) {
-	int result;
-	for (int i = start; i < imgVec.size(); i++)
-		for (int j = 0; j < imgVec[0]._height; j++)
-			for (int k = 0; k < imgVec[0]._width; k++) {
-				result = abs(bgImg(j, k) - imgVec[i](j, k));
-				if (result > TH) {
-					imgVec[i](j, k) = 0;
-				}
-				else {
-					imgVec[i](j, k) = 255;
-				}
-			}
+
+// create an array of images in the heap
+void initializeImageArray(int **&imgArr, int const sz) {
+	imgArr = new int* [sz];
+	for (int i = 0; i < sz; i++)
+		imgArr[i] = new int[IMAGE_SIZE];
 }
 
-void create_MPI_Image_Type(MPI_Datatype &ImageType, Image& img) {
-	// Length for each block
-	int lengths[3] = { 1, 1,  img._height * img._width };
 
-	// Displacement between blocks
-	MPI_Aint displacements[3];
-	MPI_Aint base_address;
-	MPI_Get_address(&img, &base_address);
-	MPI_Get_address(&img._width, &displacements[0]);
-	MPI_Get_address(&img._height, &displacements[1]);
-	MPI_Get_address(img._img, &displacements[2]);
-
-	displacements[0] = MPI_Aint_diff(displacements[0], base_address);
-	displacements[1] = MPI_Aint_diff(displacements[1], base_address);
-	displacements[2] = MPI_Aint_diff(displacements[2], base_address);
-
-	// Types for each block
-	MPI_Datatype types[3] = { MPI_UINT32_T, MPI_UINT32_T, MPI_UINT32_T };
-
-	// Commiting the new MPI type
-	MPI_Type_create_struct(3, lengths, displacements, types, &ImageType);
-	MPI_Type_commit(&ImageType);
+// Free the heap from an array of images
+void deleteImageArray(int** imgArr, int const sz) {
+	for (int i = 0; i < sz; i++)
+		delete[] imgArr[i];
+	delete[] imgArr;
 }
 
-void muskExtraction(vector<Image>& imgVec, Image &bgImg, int const TH, vector<Image> &muskVec) {
-	vector<Image> buffer; // buffer for each processor, muskImg for root processor = 0
 
-	// used for bgEquation fn
-	int count = 0, start = 0;
-
-	// Initialize the MPI env
-	MPI_Init(NULL, NULL);
-
-	// Get processes number
-	int wSize;
-	MPI_Comm_size(MPI_COMM_WORLD, &wSize);
-
-	// Get rank of this process
-	int wRank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &wRank);
-
-	// Creating Image Type in MPI
-	MPI_Datatype ImageType;
-	create_MPI_Image_Type(ImageType, imgVec[0]);
-
-	// divide imgs on processors
-	count = imgVec.size() / wSize;
-	buffer.resize(count, { new int[imgVec[0]._width * imgVec[0]._height], imgVec[0]._height, imgVec[0]._width });
-	MPI_Scatter(&imgVec, count, ImageType, &buffer, count, ImageType, 0, MPI_COMM_WORLD);
-
-	muskEquation(buffer, 0, bgImg, TH);
-
-	MPI_Gather(&buffer, count, ImageType, &muskVec, muskVec.size(), ImageType, 0, MPI_COMM_WORLD);
-	if (wRank == 0) {
-
-		start = wSize * (imgVec.size() / wSize);
-		muskEquation(muskVec, start, bgImg, TH);
-	}
-
-	// Finalize MPI env
-	MPI_Finalize();
-}
-
-void bgEquation(vector<Image>& imgVec, Image& img, int& start, int& end) {
+// overloaded function - get the sum of the pixels
+void bgEquation(int **src, int start, int end, int* dst) {
 	unsigned int sum = 0;
-	for (int i = 0; i < imgVec[0]._height; i++) {
-		for (int j = 0; j < imgVec[0]._width; j++) {
-			for (int k = start; k < end; k++) {
-				sum += imgVec[k](i, j);
-			}
-			img(i, j) = sum;
-			sum = 0;
+	for (int i = 0; i < IMAGE_SIZE; i++) {
+		for (int j = start; i < end; j++) {
+			sum += src[j][i];
 		}
+		dst[i] = sum;
+		sum = 0;
 	}
 }
 
-void bgEquation(Image& img, int division) {
-	for (int i = 0; i < img._height; i++) {
-		for (int j = 0; j < img._width; j++) {
-			img(i, j) /= division;
-		}
-	}
+
+// overloaded function - get the mean of the pixels
+void bgEquation(int* img) {
+	for (int i = 0; i < IMAGE_SIZE; i++)
+		img[i] /= IMAGE_NUMBER;
 }
 
-Image backgroundExtraction(vector<Image>& imgVec) {
-	vector<Image> buffer, recvImg; // buffer for each processor, recvImg for root processor = 0
 
-	int* arr = new int[imgVec[0]._width * imgVec[0]._height];
-	Image sendImg(arr, imgVec[0]._height, imgVec[0]._width); // result from each processor
-
-	// used for bgEquation fn
-	int start = 0, end = 0;
+// return the background image
+int* backgroundExtraction(int** imgArr) {
+	// recvImg for root processor = 0
+	int **recvImg = nullptr;
+	int sz;
+	int *retImg = new int[IMAGE_SIZE];
 
 	// Initialize the MPI env
 	MPI_Init(NULL, NULL);
@@ -263,71 +181,89 @@ Image backgroundExtraction(vector<Image>& imgVec) {
 	// Get processes number
 	int wSize;
 	MPI_Comm_size(MPI_COMM_WORLD, &wSize);
-	// initialize vector with values
-	recvImg.resize(wSize, { new int[imgVec[0]._width * imgVec[0]._height], imgVec[0]._height, imgVec[0]._width });
-
-	// Get rank of this process
-	int wRank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &wRank);
-
+	initializeImageArray(recvImg, wSize);
+	
 	// Creating Image Type in MPI
-	MPI_Datatype ImageType;
-	create_MPI_Image_Type(ImageType, imgVec[0]);
+	MPI_Datatype MPI_IMAGE;
+	MPI_Type_contiguous(IMAGE_SIZE, MPI_INT, &MPI_IMAGE);
+	MPI_Type_commit(&MPI_IMAGE);
 
 	// divide imgs on processors
-	end = imgVec.size() / wSize;
-	buffer.resize(end, { new int[imgVec[0]._width * imgVec[0]._height], imgVec[0]._height, imgVec[0]._width });
-	MPI_Scatter(&imgVec, end, ImageType, &buffer, end, ImageType, 0, MPI_COMM_WORLD);
+	sz = IMAGE_NUMBER / wSize;
+	int **buffer = nullptr;
+	initializeImageArray(buffer, sz);
+	MPI_Scatter(imgArr, sz, MPI_IMAGE, buffer, sz, MPI_IMAGE, 0, MPI_COMM_WORLD);
 
-	bgEquation(imgVec, sendImg, start, end);
+	int *sendImg = new int[IMAGE_SIZE];
+	bgEquation(imgArr, 0, sz, sendImg);
 
-	MPI_Gather(&sendImg, 1, ImageType, &recvImg, wSize, ImageType, 0, MPI_COMM_WORLD);
+	// we need to create a user defined operation and use reduce
+	MPI_Gather(sendImg, 1, MPI_IMAGE, recvImg, 1, MPI_IMAGE, 0, MPI_COMM_WORLD);
+
+	int wRank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &wRank);
 	if (wRank == 0) {
-		vector<Image> finalStage(2, { new int[imgVec[0]._width * imgVec[0]._height], imgVec[0]._height, imgVec[0]._width });
+		int** finalStage = nullptr;
+		initializeImageArray(finalStage, 2);
+
 		// Loop On Recived Images
-		end = wSize;
-		bgEquation(recvImg, finalStage[0], start, end);
+		bgEquation(recvImg, 0, wSize, finalStage[0]);
 
 		// Loop on remained images
-		start = wSize * (imgVec.size() / wSize);
-		end = imgVec.size();
-		bgEquation(imgVec, finalStage[1], start, end);
+		int start = wSize * (IMAGE_NUMBER / wSize);
+		bgEquation(imgArr, start, IMAGE_NUMBER, finalStage[1]);
 
-		start = 0;
-		end = 2;
 		// loop on last 2 img
-		bgEquation(finalStage, sendImg, start, end);
+		bgEquation(finalStage, 0, 2, sendImg);
 
-		bgEquation(sendImg, imgVec.size());
+		// divide the pixels
+		bgEquation(sendImg);
+
+		deleteImageArray(finalStage, 2);
 	}
+
+	// free memory
+	deleteImageArray(buffer, sz);
+	deleteImageArray(recvImg, wSize);
+	MPI_Type_free(&MPI_IMAGE);
+
+	copyImage(retImg, sendImg);
+	delete[] sendImg;
 
 	// Finalize MPI env
 	MPI_Finalize();
 
-	return sendImg;
+	return retImg;
 }
-
 
 int main()
 {
-	// Get Img Vector
-	vector<Image> *imgVec = readInput();
+	//Create array of images
+	int** imgArr = nullptr;
+	initializeImageArray(imgArr, IMAGE_NUMBER);
+	
+	// Fill the array with images
+	getImages(imgArr);
 
-	int start_s, stop_s, TotalTime = 0;
-	start_s = clock();
+	// Start Parrallel code
+	int start_s = clock();
+	
+	// Get background image
+	int *bgImg = backgroundExtraction(imgArr);
 
-	Image bgImg = backgroundExtraction((*imgVec));
-	vector<Image> mskVec((*imgVec).size(), { new int[(*imgVec)[0]._width * (*imgVec)[0]._height], (*imgVec)[0]._height, (*imgVec)[0]._width });
-	muskExtraction((*imgVec), bgImg, 50, mskVec);
+	// End Parrallel code
+	int stop_s = clock();
 
-	stop_s = clock();
 	// Get Parrallelism time
-	TotalTime += (stop_s - start_s) / double(CLOCKS_PER_SEC) * 1000;
+	int TotalTime = (stop_s - start_s) / double(CLOCKS_PER_SEC) * 1000;
 	cout << "time: " << TotalTime << endl;
 
-	// Save background and musk Vectors
-	createImage(bgImg._img, bgImg._width, bgImg._height, "Background", 1);
-	saveOutput(mskVec, "Musk");
+	// Save background image
+	createImage(bgImg, IMAGE_WIDTH, IMAGE_HEIGHT, 0);
+
+	//Free memory
+	deleteImageArray(imgArr, IMAGE_NUMBER);
+	delete[] bgImg;
 
 	return 0;
 }
