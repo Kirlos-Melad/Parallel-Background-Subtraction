@@ -21,8 +21,63 @@ int const IMAGE_HEIGHT = 320;
 int const IMAGE_WIDTH = 240;
 int const IMAGE_SIZE = 76800;
 
-
 // Load image to memory
+int* inputImage(int* w, int* h, System::String^ imagePath);
+
+// Save image to drive
+void createImage(int* image, int width, int height, int index);
+
+// Load multiple images
+void getImages(int**& imgArr);
+
+// Create an array of images in the heap
+void initializeImageArray(int**& imgArr, int const sz);
+
+// Free the heap from an array of images
+void deleteImageArray(int**& imgArr, int const sz);
+
+// Add Image Array
+void addImageArray(void* inputBuffer, void* outputBuffer, int* len, MPI_Datatype* datatype);
+
+
+// Get the mean of the pixels
+void pixelMean(int* &img);
+
+// Get the background image
+int* backgroundExtraction(int** &imgArr);
+
+int main()
+{
+	//Create array of images
+	int** imgArr = new int* [IMAGE_NUMBER] {0};
+	
+	// Fill the array with images
+	getImages(imgArr);
+
+	// Start Parrallel code
+	int start_s = clock();
+
+	// Get background image
+	int *bgImg = backgroundExtraction(imgArr);
+
+	// End Parrallel code
+	int stop_s = clock();
+
+	// Get Parrallelism time
+	int TotalTime = (stop_s - start_s) / double(CLOCKS_PER_SEC) * 1000;
+	cout << "time: " << TotalTime << endl;
+
+	// Save background image
+	createImage(bgImg, IMAGE_WIDTH, IMAGE_HEIGHT, 0);
+
+	//Free memory
+	deleteImageArray(imgArr, IMAGE_NUMBER);
+	delete[] bgImg;
+
+	return 0;
+}
+
+
 int* inputImage(int* w, int* h, System::String^ imagePath) //put the size of image in w & h
 {
 	int* input;
@@ -62,7 +117,6 @@ int* inputImage(int* w, int* h, System::String^ imagePath) //put the size of ima
 }
 
 
-// Save image to drive
 void createImage(int* image, int width, int height, int index)
 {
 	System::Drawing::Bitmap MyNewImage(width, height);
@@ -90,23 +144,14 @@ void createImage(int* image, int width, int height, int index)
 }
 
 
-// Copy pixels' values from an image to another
-void copyImage(int dst[IMAGE_SIZE], int src[IMAGE_SIZE]) {
-	for (int i = 0; i < IMAGE_SIZE; i++) {
-		dst[i] = src[i];
-	}
-}
-
-
-// Load multiple images
-void getImages(int **imgArr) {
+void getImages(int** &imgArr) {
 	System::String^ imagePath;
 	string const path = "../Data/Input/";
 	string imgName;
 	string num;
 	int internalLoop;
 
-	int* img, ImageWidth, ImageHeight, const totalDigits = 6;
+	int ImageWidth, ImageHeight, const totalDigits = 6;
 
 	for (int i = 1; i <= IMAGE_NUMBER; i++) {
 		// Get Img Name
@@ -122,58 +167,53 @@ void getImages(int **imgArr) {
 
 		// Get Img
 		imagePath = marshal_as<System::String^>(path + imgName);
-		img = inputImage(&ImageWidth, &ImageHeight, imagePath);
-
-		// copy 'img' values to 'imgArr'
-		copyImage(imgArr[i - 1], img);
-
-		delete[] img;
+		imgArr[i - 1] = inputImage(&ImageWidth, &ImageHeight, imagePath);
 	}
 }
 
 
-// create an array of images in the heap
-void initializeImageArray(int **&imgArr, int const sz) {
+void initializeImageArray(int** &imgArr, int const sz) {
 	imgArr = new int* [sz];
 	for (int i = 0; i < sz; i++)
-		imgArr[i] = new int[IMAGE_SIZE];
+		imgArr[i] = new int[IMAGE_SIZE] {0};
 }
 
 
-// Free the heap from an array of images
-void deleteImageArray(int** imgArr, int const sz) {
+void deleteImageArray(int** &imgArr, int const sz) {
 	for (int i = 0; i < sz; i++)
 		delete[] imgArr[i];
 	delete[] imgArr;
 }
 
 
-// overloaded function - get the sum of the pixels
-void bgEquation(int **src, int start, int end, int* dst) {
-	unsigned int sum = 0;
+void addImageArray(void* inputBuffer, void* outputBuffer, int* len, MPI_Datatype* datatype) {
+	// convert them into a proper datatype
+	int** imgArr = (int**)inputBuffer;
+	int* newImg = (int*)outputBuffer;
+	int sum = 0;
+
+	// int* len -> is the "count" argument passed to the reduction call.
+	// or if called by user it's the array size
+
 	for (int i = 0; i < IMAGE_SIZE; i++) {
-		for (int j = start; i < end; j++) {
-			sum += src[j][i];
+		for (int j = 0; i < (*len); j++) {
+			sum += imgArr[j][i];
 		}
-		dst[i] = sum;
+		newImg[i] += sum;
 		sum = 0;
 	}
 }
 
 
-// overloaded function - get the mean of the pixels
-void bgEquation(int* img) {
+void pixelMean(int* &img) {
 	for (int i = 0; i < IMAGE_SIZE; i++)
 		img[i] /= IMAGE_NUMBER;
 }
 
 
-// return the background image
-int* backgroundExtraction(int** imgArr) {
-	// recvImg for root processor = 0
-	int **recvImg = nullptr;
+int* backgroundExtraction(int** &imgArr) {
 	int sz;
-	int *retImg = new int[IMAGE_SIZE];
+	int* retImg = new int[IMAGE_SIZE] {0};
 
 	// Initialize the MPI env
 	MPI_Init(NULL, NULL);
@@ -181,89 +221,65 @@ int* backgroundExtraction(int** imgArr) {
 	// Get processes number
 	int wSize;
 	MPI_Comm_size(MPI_COMM_WORLD, &wSize);
-	initializeImageArray(recvImg, wSize);
-	
-	// Creating Image Type in MPI
+
+	// Create Image Type in MPI
 	MPI_Datatype MPI_IMAGE;
 	MPI_Type_contiguous(IMAGE_SIZE, MPI_INT, &MPI_IMAGE);
 	MPI_Type_commit(&MPI_IMAGE);
 
+	// Create Add Image Operation in MPI
+	MPI_Op MPI_ADD_IMAGE;
+	MPI_Op_create((MPI_User_function*)addImageArray, 1, &MPI_ADD_IMAGE);
+
 	// divide imgs on processors
 	sz = IMAGE_NUMBER / wSize;
-	int **buffer = nullptr;
+	int** buffer = nullptr;
 	initializeImageArray(buffer, sz);
+
+	cout << "Ready for Scatter .. Press any key\n";
+	cin.get();
+
 	MPI_Scatter(imgArr, sz, MPI_IMAGE, buffer, sz, MPI_IMAGE, 0, MPI_COMM_WORLD);
 
-	int *sendImg = new int[IMAGE_SIZE];
-	bgEquation(imgArr, 0, sz, sendImg);
+	cout << "Done Scatter .. Press any key\n";
+	cin.get();
 
-	// we need to create a user defined operation and use reduce
-	MPI_Gather(sendImg, 1, MPI_IMAGE, recvImg, 1, MPI_IMAGE, 0, MPI_COMM_WORLD);
+	// put the result from each processor
+	int* sendImg = new int[IMAGE_SIZE] {0};
+	addImageArray(buffer, sendImg, &sz, nullptr);
+
+	// reduce the result at root processor = 0
+	MPI_Reduce(sendImg, retImg, 1, MPI_IMAGE, MPI_ADD_IMAGE, 0, MPI_COMM_WORLD);
 
 	int wRank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &wRank);
 	if (wRank == 0) {
-		int** finalStage = nullptr;
-		initializeImageArray(finalStage, 2);
+		int* remainedImgs = new int[IMAGE_SIZE] {0};
 
-		// Loop On Recived Images
-		bgEquation(recvImg, 0, wSize, finalStage[0]);
-
-		// Loop on remained images
+		// Add remained images
 		int start = wSize * (IMAGE_NUMBER / wSize);
-		bgEquation(imgArr, start, IMAGE_NUMBER, finalStage[1]);
+		int imgNum = IMAGE_NUMBER;
+		addImageArray(imgArr + start, remainedImgs, &imgNum, nullptr);
 
-		// loop on last 2 img
-		bgEquation(finalStage, 0, 2, sendImg);
+		// Add last 2 img
+		imgNum = 1;
+		addImageArray(remainedImgs, retImg, &imgNum, nullptr);
 
-		// divide the pixels
-		bgEquation(sendImg);
+		// Divide the pixels on its number
+		pixelMean(retImg);
 
-		deleteImageArray(finalStage, 2);
+		// Free memory
+		delete[] remainedImgs;
 	}
 
 	// free memory
 	deleteImageArray(buffer, sz);
-	deleteImageArray(recvImg, wSize);
 	MPI_Type_free(&MPI_IMAGE);
-
-	copyImage(retImg, sendImg);
+	MPI_Op_free(&MPI_ADD_IMAGE);
 	delete[] sendImg;
 
 	// Finalize MPI env
 	MPI_Finalize();
 
 	return retImg;
-}
-
-int main()
-{
-	//Create array of images
-	int** imgArr = nullptr;
-	initializeImageArray(imgArr, IMAGE_NUMBER);
-	
-	// Fill the array with images
-	getImages(imgArr);
-
-	// Start Parrallel code
-	int start_s = clock();
-	
-	// Get background image
-	int *bgImg = backgroundExtraction(imgArr);
-
-	// End Parrallel code
-	int stop_s = clock();
-
-	// Get Parrallelism time
-	int TotalTime = (stop_s - start_s) / double(CLOCKS_PER_SEC) * 1000;
-	cout << "time: " << TotalTime << endl;
-
-	// Save background image
-	createImage(bgImg, IMAGE_WIDTH, IMAGE_HEIGHT, 0);
-
-	//Free memory
-	deleteImageArray(imgArr, IMAGE_NUMBER);
-	delete[] bgImg;
-
-	return 0;
 }
