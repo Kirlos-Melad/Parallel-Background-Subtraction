@@ -16,8 +16,8 @@ using namespace msclr::interop;
 
 // Image Global Macros
 #define IMAGE_NUMBER 495
-#define IMAGE_HEIGHT 320
-#define IMAGE_WIDTH 240
+#define IMAGE_HEIGHT 240
+#define IMAGE_WIDTH 320
 #define IMAGE_SIZE 76800
 
 // MPI Global Variables
@@ -40,7 +40,7 @@ void copyImage(int* dst, int* src);
 // Create an array of images in the heap
 void initializeImageArray(int**& imgArr, int const sz);
 
-// Free the heap from an array of images - the array must be declared using initializeImageArray()
+// Free the heap from an array of images - the array must be initialized using initializeImageArray()
 void deleteImageArray(int** imgArr, int const sz);
 
 // Add Image Array
@@ -71,7 +71,7 @@ int main()
 
 	// Sequential part
 	if (wRank == rootProcessor) {
-		// Fill the array with images
+		// Fill the array with images - only rootProcessor needs the values
 		getImages(imgArr);
 	}
 
@@ -89,17 +89,18 @@ int main()
 
 	// Sequential part
 	if (wRank == rootProcessor) {
-		// print Rank 0 time only
+		// print Rank rootProcessor time only
 		cout << "time: " << TotalTime << endl;
 
 		// Save background image
 		createImage(bgImg, IMAGE_WIDTH, IMAGE_HEIGHT, 1);
 
-		//Free memory
-		deleteImageArray(imgArr, IMAGE_NUMBER);
-		// Only rank 0 will return a value
-		delete[] bgImg; 
+		//Free memory - only rootProcessor will return a value
+		delete[] bgImg;
 	}
+
+	// Free memory
+	deleteImageArray(imgArr, IMAGE_NUMBER);
 
 	// Finalize MPI env
 	MPI_Finalize();
@@ -181,7 +182,7 @@ void getImages(int** imgArr) {
 	string num;
 	int internalLoop;
 
-	int *img, ImageWidth, ImageHeight, const totalDigits = 6;
+	int* img, ImageWidth, ImageHeight, const totalDigits = 6;
 
 	for (int i = 1; i <= IMAGE_NUMBER; i++) {
 		// Get Img Name
@@ -200,7 +201,7 @@ void getImages(int** imgArr) {
 		img = inputImage(&ImageWidth, &ImageHeight, imagePath);
 
 		copyImage(imgArr[i - 1], img);
-		
+
 		delete[] img;
 	}
 }
@@ -225,6 +226,7 @@ void initializeImageArray(int**& imgArr, int const sz) {
 
 void deleteImageArray(int** imgArr, int const sz) {
 	delete[] * imgArr;
+	delete[] imgArr;
 }
 
 
@@ -281,8 +283,7 @@ int* backgroundExtraction(int** imgArr) {
 		addImageArray(imgArr + start, remainedImgs, imgNum);
 
 		// Add last 2 img
-		imgNum = 1;
-		addImageArray(&remainedImgs, retImg, imgNum);
+		addImageArray(&remainedImgs, retImg, 1);
 
 		// Divide the pixels on its number
 		pixelMean(retImg);
@@ -298,6 +299,6 @@ int* backgroundExtraction(int** imgArr) {
 		delete[] retImg;
 		retImg = nullptr;
 	}
-	
+
 	return retImg;
 }
