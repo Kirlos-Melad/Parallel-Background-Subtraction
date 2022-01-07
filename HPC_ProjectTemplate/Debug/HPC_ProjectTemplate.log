@@ -1,5 +1,5 @@
 ﻿  Source.cpp
-C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(88,16): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
-C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(185,58): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(96,16): warning C4244: 'initializing': conversion from 'double' to 'int', possible loss of data
+C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\HPC_ProjectTemplate\Source.cpp(197,58): warning C4228: nonstandard extension used: qualifiers after comma in declarator list are ignored
   Source.obj : MSIL module encountered; incremental linking is disabled for MSIL; performing full link
   HPC_ProjectTemplate.vcxproj -> C:\Users\KirlosMelad\MyFiles\Projects Working on\Parallel-Background-Subtraction\Debug\HPC_ProjectTemplate.exe

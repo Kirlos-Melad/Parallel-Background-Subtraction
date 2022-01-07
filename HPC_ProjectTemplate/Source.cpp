@@ -24,6 +24,11 @@ using namespace msclr::interop;
 int wSize, wRank;
 const int rootProcessor = 0;
 
+// Equation for comparing the original image's pixels
+void muskEquation(int* src, int start, int end, int* dst);
+
+// to extract the musk using the background and the original img
+int* muskExtraction(int* img);
 
 // Load image to memory
 int* inputImage(int* w, int* h, System::String^ imagePath);
@@ -81,6 +86,9 @@ int main()
 	// Get background image
 	int* bgImg = backgroundExtraction(imgArr);
 
+	// Get musk image
+	int* musk = muskExtraction(bgImg);
+
 	// End Parrallel code
 	int stop_s = clock();
 
@@ -95,8 +103,12 @@ int main()
 		// Save background image
 		createImage(bgImg, IMAGE_WIDTH, IMAGE_HEIGHT, 1);
 
+		// Save musk image
+		createImage(musk, IMAGE_WIDTH, IMAGE_HEIGHT, 2);
+
 		//Free memory - only rootProcessor will return a value
 		delete[] bgImg;
+		delete[] musk;
 	}
 
 	// Free memory
@@ -116,7 +128,7 @@ int* inputImage(int* w, int* h, System::String^ imagePath) //put the size of ima
 
 	int OriginalImageWidth, OriginalImageHeight;
 
-	//*********************************************************Read Image and save it to local arrayss*************************	
+	//********************Read Image and save it to local arrayss********	
 	//Read Image and save it to local arrayss
 
 	System::Drawing::Bitmap BM(imagePath);
@@ -301,4 +313,58 @@ int* backgroundExtraction(int** imgArr) {
 	}
 
 	return retImg;
+}
+
+
+int* muskExtraction(int* const Img) {
+	// recvImg for root processor = 0
+	int sz;
+
+	// divide img pixels on processors
+	sz = IMAGE_SIZE / wSize;
+	System::String^ path;
+	int* buffer = new int[sz];
+	int* buffer2 = new int[sz];
+	path = marshal_as<System::String^>("../Data/Input/in000256.jpg");
+	int ImageW = 0, ImageH = 0;
+	int* sendImg = inputImage(&ImageW, &ImageH, path);
+
+	MPI_Scatter(sendImg, sz, MPI_INT, buffer2, sz, MPI_INT, rootProcessor, MPI_COMM_WORLD);
+
+	MPI_Scatter(Img, sz, MPI_INT, buffer, sz, MPI_INT, rootProcessor, MPI_COMM_WORLD);
+
+	muskEquation(buffer, 0, sz, buffer2);
+
+	MPI_Gather(buffer2, sz, MPI_INT, sendImg, sz, MPI_INT, rootProcessor, MPI_COMM_WORLD);
+
+	if (wRank == rootProcessor) {
+
+		muskEquation(Img, sz * wRank, IMAGE_SIZE, sendImg);
+	}
+
+
+	// Free memory
+	delete[] buffer;
+	delete[] buffer2;
+	if (wRank != rootProcessor) {
+		delete[] sendImg;
+		sendImg = nullptr;
+	}
+
+	return sendImg;
+}
+
+void muskEquation(int* src, int start, int end, int* dst) {
+	int TH = 60;
+	for (start; start < end; start++) {
+		// new img = bgimg - original img
+		// if > TH then change to the result
+		if (abs(dst[start] - src[start]) > TH) {
+			dst[start] = dst[start];
+		}
+		// smaller thant TH then black
+		else {
+			dst[start] = 0;
+		}
+	}
 }
