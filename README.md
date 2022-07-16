@@ -1,2 +1,3 @@
 # Parallel-Background-Subtraction
-Parallel Background Subtraction using MPI library
+
+Applied Background subtraction algorithm to a large stream of inputs using MPI Library to apply multi-processing concepts
